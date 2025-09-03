@@ -1,26 +1,34 @@
 import os
+import subprocess
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = await context.bot.get_file(update.message.document.file_id)
-    await file.download_to_drive("voice.ogg")
+    file = update.message.audio or update.message.voice or update.message.video or update.message.document
+    if not file:
+        return
 
-    await update.message.reply_text("🎵 Получено аудио, отправляю как голосовое...")
+    file_path = await file.get_file()
+    await file_path.download_to_drive("input.mp3")
 
-    with open("voice.ogg", "rb") as voice_file:
-        await update.message.reply_voice(
-            voice=voice_file,
-            duration=42,  # длительность в секундах
-            caption=None  # можно убрать
-        )
+    # Конвертация в .ogg (voice с волнами)
+    subprocess.run([
+        "ffmpeg", "-i", "input.mp3",
+        "-c:a", "libopus", "-b:a", "64k",
+        "-ar", "48000", "-ac", "1",
+        "voice.ogg"
+    ])
 
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.Document.AUDIO | filters.Document.OGG, handle_audio))
-    app.run_polling()
+    with open("voice.ogg", "rb") as f:
+        await update.message.reply_voice(f)
 
-if __name__ == "__main__":
-    main()
+    os.remove("input.mp3")
+    os.remove("voice.ogg")
+
+app = Application.builder().token(TOKEN).build()
+app.add_handler(MessageHandler(filters.AUDIO | filters.VOICE | filters.VIDEO | filters.Document.ALL, handle_audio))
+
+print("✅ Бот запущен...")
+app.run_polling()
