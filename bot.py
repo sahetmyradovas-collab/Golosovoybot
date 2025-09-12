@@ -3,7 +3,7 @@ import subprocess
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "8332887578:AAHSLW3m-JAO3v3F7LJBWSc75-lMHnFJbt0"
 
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = update.message.audio or update.message.voice or update.message.video or update.message.document
